@@ -15,8 +15,8 @@ type FuncMetaTypeConv func(val interface{}) (newVal interface{}, converted bool)
 type EventData struct {
 	Parameters       interface{} `json:"parameters"`         // Any parameters if relevant (and outside the actual payload)
 	NewData          interface{} `json:"new_data"`           // the actual payload being processed. In most cases the JSON payload deserialized into interface{}
-	PriorState       interface{} `json:"prior_state"`        // Prior state of the object being modified, nil if no prior state
-	ResultingState   interface{} `json:"resulting_state"`    // Resulting object after creating or modifying it
+	PriorState       Auditable   `json:"prior_state"`        // Prior state of the object being modified, nil if no prior state
+	ResultingState   Auditable   `json:"resulting_state"`    // Resulting object after creating or modifying it
 	ResultObjectType string      `json:"result_object_type"` // string representation of the object type. eg. "post"
 }
 
@@ -77,8 +77,8 @@ func (rec *Record) AddMeta(name string, val interface{}) {
 // For example, it might make sense to include the `new_data` value for audit log entries for
 // failed API calls.
 func (rec *Record) AddMetadata(newObject interface{},
-	priorObject interface{},
-	resultObject interface{},
+	priorObject Auditable,
+	resultObject Auditable,
 	resultObjectType string) {
 	eventData := EventData{
 		NewData:          newObject,

@@ -61,6 +61,15 @@ type Channel struct {
 	LastRootPostAt    int64                  `json:"last_root_post_at"`
 }
 
+// Example implementation of the Auditable interface.
+// TODO Review and actually implement this
+func (c *Channel) AuditableObject() interface{} {
+	return map[string]interface{}{
+		"id":           c.Id,
+		"display_name": c.DisplayName,
+	}
+}
+
 type ChannelWithTeamData struct {
 	Channel
 	TeamDisplayName string `json:"team_display_name"`
