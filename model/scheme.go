@@ -93,6 +93,10 @@ type SchemeRoles struct {
 	SchemeGuest bool `json:"scheme_guest"`
 }
 
+func (s *SchemeRoles) AuditableObject() interface{} {
+	return map[string]interface{}{}
+}
+
 func (scheme *Scheme) IsValid() bool {
 	if !IsValidId(scheme.Id) {
 		return false

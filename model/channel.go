@@ -90,6 +90,10 @@ type ChannelPatch struct {
 	GroupConstrained *bool   `json:"group_constrained"`
 }
 
+func (c *ChannelPatch) AuditableObject() interface{} {
+	return map[string]interface{}{}
+}
+
 type ChannelForExport struct {
 	Channel
 	TeamName   string

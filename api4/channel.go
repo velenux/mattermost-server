@@ -4,10 +4,8 @@
 package api4
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -81,17 +79,8 @@ func (api *API) InitChannel() {
 }
 
 func createChannel(c *Context, w http.ResponseWriter, r *http.Request) {
-	postBody, readErr := ioutil.ReadAll(r.Body)
-	if readErr != nil {
-		return
-	}
-	defer r.Body.Close()
-
-	var postPayload interface{}
-	_ = json.NewDecoder(bytes.NewBuffer(postBody)).Decode(&postPayload)
-
 	var channel *model.Channel
-	err := json.NewDecoder(bytes.NewBuffer(postBody)).Decode(&channel)
+	err := json.NewDecoder(r.Body).Decode(&channel)
 	if err != nil {
 		c.SetInvalidParam("channel")
 		return
@@ -119,7 +108,7 @@ func createChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	auditRec.Success()
 	auditRec.AddMeta("channel", sc) // overwrite meta
-	auditRec.AddMetadata(postPayload, nil, sc, "channel")
+	auditRec.AddMetadata(channel, nil, sc, "channel")
 	c.LogAudit("name=" + channel.Name)
 
 	w.WriteHeader(http.StatusCreated)
@@ -134,17 +123,8 @@ func updateChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	postBody, readErr := ioutil.ReadAll(r.Body)
-	if readErr != nil {
-		return
-	}
-	defer r.Body.Close()
-
-	var postPayload interface{}
-	_ = json.NewDecoder(bytes.NewBuffer(postBody)).Decode(&postPayload)
-
 	var channel *model.Channel
-	err := json.NewDecoder(bytes.NewBuffer(postBody)).Decode(&channel)
+	err := json.NewDecoder(r.Body).Decode(&channel)
 	if err != nil {
 		c.SetInvalidParam("channel")
 		return
@@ -242,7 +222,7 @@ func updateChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	auditRec.Success()
-	auditRec.AddMetadata(postPayload, originalOldChannel, updatedChannel, "channel")
+	auditRec.AddMetadata(channel, originalOldChannel, updatedChannel, "channel")
 	c.LogAudit("name=" + channel.Name)
 
 	if err := json.NewEncoder(w).Encode(oldChannel); err != nil {
@@ -256,16 +236,7 @@ func updateChannelPrivacy(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	postBody, readErr := ioutil.ReadAll(r.Body)
-	if readErr != nil {
-		return
-	}
-	defer r.Body.Close()
-
-	var postPayload interface{}
-	_ = json.NewDecoder(bytes.NewBuffer(postBody)).Decode(&postPayload)
-
-	props := model.StringInterfaceFromJSON(bytes.NewBuffer(postBody))
+	props := model.StringInterfaceFromJSON(r.Body)
 	privacy, ok := props["privacy"].(string)
 	if !ok || (model.ChannelType(privacy) != model.ChannelTypeOpen && model.ChannelType(privacy) != model.ChannelTypePrivate) {
 		c.SetInvalidParam("privacy")
@@ -315,7 +286,7 @@ func updateChannelPrivacy(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	auditRec.Success()
-	auditRec.AddMetadata(postPayload, priorChannel, updatedChannel, "channel")
+	auditRec.AddMetadata(audit.AuditableMap(props), priorChannel, updatedChannel, "channel")
 	c.LogAudit("name=" + updatedChannel.Name)
 
 	if err := json.NewEncoder(w).Encode(updatedChannel); err != nil {
@@ -329,17 +300,8 @@ func patchChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	postBody, readErr := ioutil.ReadAll(r.Body)
-	if readErr != nil {
-		return
-	}
-	defer r.Body.Close()
-
-	var postPayload interface{}
-	_ = json.NewDecoder(bytes.NewBuffer(postBody)).Decode(&postPayload)
-
 	var patch *model.ChannelPatch
-	err := json.NewDecoder(bytes.NewBuffer(postBody)).Decode(&patch)
+	err := json.NewDecoder(r.Body).Decode(&patch)
 	if err != nil {
 		c.SetInvalidParam("channel")
 		return
@@ -401,7 +363,7 @@ func patchChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRec.AddMetadata(postPayload, oldChannelForAuditLog, rchannel, "channel")
+	auditRec.AddMetadata(patch, oldChannelForAuditLog, rchannel, "channel")
 
 	auditRec.Success()
 	c.LogAudit("")
@@ -442,7 +404,7 @@ func restoreChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRec.AddMetadata(c.Params, channelForAudit, channel, "channel")
+	auditRec.AddMetadata(nil, channelForAudit, channel, "channel") // TODO pick params to log
 	auditRec.Success()
 	c.LogAudit("name=" + channel.Name)
 
@@ -452,16 +414,7 @@ func restoreChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 }
 
 func createDirectChannel(c *Context, w http.ResponseWriter, r *http.Request) {
-	postBody, readErr := ioutil.ReadAll(r.Body)
-	if readErr != nil {
-		return
-	}
-	defer r.Body.Close()
-
-	var postPayload interface{}
-	_ = json.NewDecoder(bytes.NewBuffer(postBody)).Decode(&postPayload)
-
-	userIds := model.ArrayFromJSON(bytes.NewBuffer(postBody))
+	userIds := model.ArrayFromJSON(r.Body)
 	allowed := false
 
 	if len(userIds) != 2 {
@@ -516,7 +469,7 @@ func createDirectChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRec.AddMetadata(postPayload, nil, sc, "channel")
+	auditRec.AddMetadata(audit.AuditableStringArray(userIds), nil, sc, "channel")
 	auditRec.Success()
 	auditRec.AddMeta("channel", sc)
 
@@ -546,16 +499,7 @@ func searchGroupChannels(c *Context, w http.ResponseWriter, r *http.Request) {
 }
 
 func createGroupChannel(c *Context, w http.ResponseWriter, r *http.Request) {
-	postBody, readErr := ioutil.ReadAll(r.Body)
-	if readErr != nil {
-		return
-	}
-	defer r.Body.Close()
-
-	var postPayload interface{}
-	_ = json.NewDecoder(bytes.NewBuffer(postBody)).Decode(&postPayload)
-
-	userIds := model.ArrayFromJSON(bytes.NewBuffer(postBody))
+	userIds := model.ArrayFromJSON(r.Body)
 
 	if len(userIds) == 0 {
 		c.SetInvalidParam("user_ids")
@@ -612,7 +556,7 @@ func createGroupChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	auditRec.Success()
 	auditRec.AddMeta("channel", groupChannel)
-	auditRec.AddMetadata(postPayload, nil, groupChannel, "channel")
+	auditRec.AddMetadata(audit.AuditableStringArray(userIds), nil, groupChannel, "channel")
 
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(groupChannel); err != nil {
@@ -1314,7 +1258,7 @@ func deleteChannel(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRec.AddMetadata(c.Params, priorChannelForAudit, channel, "channel")
+	auditRec.AddMetadata(nil, priorChannelForAudit, channel, "channel") // TODO params
 	auditRec.Success()
 	c.LogAudit("name=" + channel.Name)
 
@@ -1567,16 +1511,7 @@ func updateChannelMemberRoles(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	postBody, readErr := ioutil.ReadAll(r.Body)
-	if readErr != nil {
-		return
-	}
-	defer r.Body.Close()
-
-	var postPayload interface{}
-	_ = json.NewDecoder(bytes.NewBuffer(postBody)).Decode(&postPayload)
-
-	props := model.MapFromJSON(bytes.NewBuffer(postBody))
+	props := model.MapFromJSON(r.Body)
 
 	newRoles := props["roles"]
 	if !(model.IsValidUserRoles(newRoles)) {
@@ -1602,7 +1537,7 @@ func updateChannelMemberRoles(c *Context, w http.ResponseWriter, r *http.Request
 
 	resultChannelForAudit, _ := c.App.GetChannel(c.Params.ChannelId)
 
-	auditRec.AddMetadata(postPayload, priorChannelForAudit, resultChannelForAudit, "channel")
+	auditRec.AddMetadata(audit.AuditableStringMap(props), priorChannelForAudit, resultChannelForAudit, "channel")
 	auditRec.Success()
 
 	ReturnStatusOK(w)
@@ -1614,17 +1549,8 @@ func updateChannelMemberSchemeRoles(c *Context, w http.ResponseWriter, r *http.R
 		return
 	}
 
-	postBody, readErr := ioutil.ReadAll(r.Body)
-	if readErr != nil {
-		return
-	}
-	defer r.Body.Close()
-
-	var postPayload interface{}
-	_ = json.NewDecoder(bytes.NewBuffer(postBody)).Decode(&postPayload)
-
 	var schemeRoles model.SchemeRoles
-	if jsonErr := json.NewDecoder(bytes.NewBuffer(postBody)).Decode(&schemeRoles); jsonErr != nil {
+	if jsonErr := json.NewDecoder(r.Body).Decode(&schemeRoles); jsonErr != nil {
 		c.SetInvalidParam("scheme_roles")
 		return
 	}
@@ -1647,7 +1573,7 @@ func updateChannelMemberSchemeRoles(c *Context, w http.ResponseWriter, r *http.R
 
 	resultChannelForAudit, _ := c.App.GetChannel(c.Params.ChannelId)
 
-	auditRec.AddMetadata(postPayload, priorChannelForAudit, resultChannelForAudit, "channel")
+	auditRec.AddMetadata(&schemeRoles, priorChannelForAudit, resultChannelForAudit, "channel")
 	auditRec.Success()
 
 	ReturnStatusOK(w)

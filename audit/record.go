@@ -14,7 +14,7 @@ type FuncMetaTypeConv func(val interface{}) (newVal interface{}, converted bool)
 // the EventData struct.
 type EventData struct {
 	Parameters       interface{} `json:"parameters"`         // Any parameters if relevant (and outside the actual payload)
-	NewData          interface{} `json:"new_data"`           // the actual payload being processed. In most cases the JSON payload deserialized into interface{}
+	NewData          Auditable   `json:"new_data"`           // the actual payload being processed. In most cases the JSON payload deserialized into interface{}
 	PriorState       Auditable   `json:"prior_state"`        // Prior state of the object being modified, nil if no prior state
 	ResultingState   Auditable   `json:"resulting_state"`    // Resulting object after creating or modifying it
 	ResultObjectType string      `json:"result_object_type"` // string representation of the object type. eg. "post"
@@ -25,6 +25,27 @@ type EventData struct {
 // audit logs, but not the user password in cleartext or hashed form
 type Auditable interface {
 	AuditableObject() interface{}
+}
+
+type AuditableMap map[string]interface{}
+
+func (a AuditableMap) AuditableObject() interface{} {
+	return a
+}
+
+type AuditableStringArray []string
+
+// wrap a string array in a map so that the object to be audited is always a dictionary, never array
+func (a AuditableStringArray) AuditableObject() interface{} {
+	return map[string]interface{}{
+		"array": a,
+	}
+}
+
+type AuditableStringMap map[string]string
+
+func (a AuditableStringMap) AuditableObject() interface{} {
+	return a
 }
 
 // Record provides a consistent set of fields used for all audit logging.
@@ -76,7 +97,7 @@ func (rec *Record) AddMeta(name string, val interface{}) {
 // TODO: Consider additionally implementing individual setters for the different keys in EventData.
 // For example, it might make sense to include the `new_data` value for audit log entries for
 // failed API calls.
-func (rec *Record) AddMetadata(newObject interface{},
+func (rec *Record) AddMetadata(newObject Auditable,
 	priorObject Auditable,
 	resultObject Auditable,
 	resultObjectType string) {
