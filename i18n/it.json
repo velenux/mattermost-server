@@ -2869,7 +2869,7 @@
   },
   {
     "id": "app.notification.subject.notification.full",
-    "translation": "[{{ .SiteName }}] Notifca in {{ .TeamName}} del {{.Day}}/{{.Month}}/{{.Year}}"
+    "translation": "[{{ .SiteName }}] Notifica in {{ .TeamName}} del {{.Day}}/{{.Month}}/{{.Year}}"
   },
   {
     "id": "app.plugin.cluster.save_config.app_error",
